@@ -120,37 +120,34 @@ ax.grid(True)
 st.pyplot(fig)
 
 
-
-import joblib
-
 st.subheader("📦 Random Forest Prediction (Pre-trained)")
 
-# Check if model exists
-model_path = f"models/rf_model_india.pkl"
-if os.path.exists(model_path):
-    rf_model = joblib.load(model_path)
-
-    # Prepare input years
-    last_year = int(X.max())
-    future_years = np.array([last_year + i for i in range(1, predict_years + 1)]).reshape(-1, 1)
-
-    # Predict on full + future
-    y_pred_rf_full = rf_model.predict(X)
-    y_pred_rf_future = rf_model.predict(future_years)
-
-    y_pred_rf_full = np.expm1(y_pred_rf_full)
-    y_pred_rf_future = np.expm1(y_pred_rf_future)
-
-    # Plot
+# Load RF model for selected country (assume India here)
+rf_model_path = f"models/rf_model_{selected_country.lower()}.pkl"
+if os.path.exists(rf_model_path):
+    rf_model = joblib.load(rf_model_path)
+    
+    # Predict on test set
+    y_pred_rf = rf_model.predict(X_test)
+    
+    # Predict future years — WARNING: RF may not extrapolate well
+    y_pred_rf_future = rf_model.predict(X_future)
+    
+    # Metrics on test set
+    mse_rf = mean_squared_error(y_test, y_pred_rf)
+    mae_rf = mean_absolute_error(y_test, y_pred_rf)
+    
+    st.write(f"Test MSE (Random Forest): {mse_rf:.2f}")
+    st.write(f"Test MAE (Random Forest): {mae_rf:.2f}")
+    
+    # Plot RF predictions vs actual + future prediction
     fig_rf, ax_rf = plt.subplots()
-    ax_rf.plot(X, y, label="Actual", marker="o")
-    ax_rf.plot(X, y_pred_rf_full, label="RF Prediction (Train)", linestyle="--")
-    ax_rf.plot(future_years, y_pred_rf_future, label="RF Prediction (Future)", marker="^")
+    ax_rf.plot(X, y, label="Actual Emissions", marker='o')
+    ax_rf.plot(X_test, y_pred_rf, label="RF Predicted (Test)", marker='x')
+    ax_rf.plot(X_future, y_pred_rf_future, label="RF Predicted (Future)", marker='^')
     ax_rf.set_xlabel("Year")
     ax_rf.set_ylabel("Annual CO₂ emissions (tonnes)")
-    ax_rf.set_title(f"Random Forest Emission Prediction for India")
+    ax_rf.set_title(f"Random Forest Prediction for {selected_country}")
     ax_rf.legend()
     ax_rf.grid(True)
     st.pyplot(fig_rf)
-else:
-    st.warning("Random Forest model file not found. Please train and save the model for the selected country.")
